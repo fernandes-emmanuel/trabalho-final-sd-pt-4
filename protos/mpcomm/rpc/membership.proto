@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package mpcomm;
+
+message Empty {}
+
+message PeerInfo {
+  int32 peer_id = 1;
+  string name = 2;
+  string host = 3;
+  int32 udp_port = 4;
+  int32 control_port = 5;
+}
+
+message RegisterRequest {
+  string name = 1;
+  string host = 2;
+  int32 udp_port = 3;
+  int32 control_port = 4;
+}
+
+message RegisterReply {
+  int32 peer_id = 1;
+}
+
+message UnregisterRequest {
+  int32 peer_id = 1;
+}
+
+message PeerList {
+  repeated PeerInfo peers = 1;
+}
+
+service GroupManager {
+  rpc Register(RegisterRequest) returns (RegisterReply);
+  rpc Unregister(UnregisterRequest) returns (Empty);
+  rpc ListPeers(Empty) returns (PeerList);
+  rpc Shutdown(Empty) returns (Empty);
+}
