@@ -1,0 +1,71 @@
+x-boxoffice: &boxoffice
+  image: boxoffice:latest
+  build: .
+  environment: &environment
+    BOXOFFICE_GROUP_MANAGER: group-manager:5680
+    BOXOFFICE_LOG_LEVEL: info
+
+x-office: &office
+  <<: *boxoffice
+  command: ["boxoffice", "office"]
+  cap_add: [NET_ADMIN]
+  depends_on: [group-manager]
+
+x-region-a: &region-a
+  <<: *environment
+  NETEM: ${REGION_A_NETEM-delay 2ms 1ms}
+
+x-region-b: &region-b
+  <<: *environment
+  NETEM: ${REGION_B_NETEM-delay 120ms 60ms distribution normal loss 5%}
+
+services:
+  group-manager:
+    <<: *boxoffice
+    command: ["boxoffice", "group-manager"]
+
+  office-sao-paulo:
+    <<: *office
+    environment:
+      <<: *region-a
+      BOXOFFICE_OFFICE_NAME: sao-paulo
+
+  office-rio:
+    <<: *office
+    environment:
+      <<: *region-a
+      BOXOFFICE_OFFICE_NAME: rio
+
+  office-belo-horizonte:
+    <<: *office
+    environment:
+      <<: *region-a
+      BOXOFFICE_OFFICE_NAME: belo-horizonte
+
+  office-lisboa:
+    <<: *office
+    environment:
+      <<: *region-b
+      BOXOFFICE_OFFICE_NAME: lisboa
+
+  office-toquio:
+    <<: *office
+    environment:
+      <<: *region-b
+      BOXOFFICE_OFFICE_NAME: toquio
+
+  auditor:
+    <<: *boxoffice
+    command: ["boxoffice", "auditor", "--offices", "5", "--sequencer", "sao-paulo"]
+    depends_on: [office-sao-paulo, office-rio, office-belo-horizonte, office-lisboa, office-toquio]
+    stdin_open: true
+    tty: true
+    profiles: [tools]
+    volumes:
+      - ./results:/app/results
+
+  client:
+    <<: *boxoffice
+    entrypoint: ["entrypoint.sh", "boxoffice", "client"]
+    command: ["--help"]
+    profiles: [tools]
