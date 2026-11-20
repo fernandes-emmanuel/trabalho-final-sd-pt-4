@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package boxoffice;
+
+message Empty {}
+
+message Venue {
+  int32 rows = 1;
+  int32 seats_per_row = 2;
+}
+
+enum Outcome {
+  OUTCOME_UNSPECIFIED = 0;
+  ACCEPTED = 1;
+  SEAT_TAKEN = 2;
+  NOT_OWNER = 3;
+  UNKNOWN_SEAT = 4;
+}
+
+message ReserveRequest {
+  string seat = 1;
+  string customer = 2;
+}
+
+message ReserveGroupRequest {
+  repeated string seats = 1;
+  string customer = 2;
+}
+
+message CancelRequest {
+  string seat = 1;
+  string customer = 2;
+}
+
+message CommandReply {
+  string command_id = 1;
+  Outcome outcome = 2;
+  int32 office_id = 3;
+  string office_name = 4;
+}
+
+message SeatOwner {
+  string seat = 1;
+  string customer = 2;
+}
+
+message SeatMapReply {
+  int64 session_id = 1;
+  Venue venue = 2;
+  repeated SeatOwner owners = 3;
+  int32 office_id = 4;
+  string office_name = 5;
+  int64 applied = 6;
+  string digest = 7;
+}
+
+service TicketOffice {
+  rpc Reserve(ReserveRequest) returns (CommandReply);
+  rpc ReserveGroup(ReserveGroupRequest) returns (CommandReply);
+  rpc Cancel(CancelRequest) returns (CommandReply);
+  rpc GetSeatMap(Empty) returns (SeatMapReply);
+}
+
+message OpenSessionRequest {
+  int64 session_id = 1;
+  Venue venue = 2;
+  string report_to = 3;
+  string ordering = 4;
+  string sequencer = 5;
+}
+
+message OpenSessionReply {
+  int32 office_id = 1;
+  int32 group_size = 2;
+}
+
+message WorkloadRequest {
+  int64 session_id = 1;
+  int32 commands = 2;
+  int64 seed = 3;
+  int32 hot_seats = 4;
+  double hot_probability = 5;
+  int32 min_interval_ms = 6;
+  int32 max_interval_ms = 7;
+}
+
+message WorkloadReply {
+  int32 issued = 1;
+  int32 accepted = 2;
+}
+
+message SessionRef {
+  int64 session_id = 1;
+}
+
+service OfficeControl {
+  rpc OpenSession(OpenSessionRequest) returns (OpenSessionReply);
+  rpc RunWorkload(WorkloadRequest) returns (WorkloadReply);
+  rpc CloseSession(SessionRef) returns (Empty);
+  rpc Shutdown(Empty) returns (Empty);
+}
+
+message AppliedCommand {
+  string command_id = 1;
+  string operation = 2;
+  repeated string seats = 3;
+  string customer = 4;
+  Outcome outcome = 5;
+}
+
+message TransportStats {
+  int64 data_sent = 1;
+  int64 retransmissions = 2;
+  int64 acks_sent = 3;
+  int64 duplicates_discarded = 4;
+  int64 held_back = 5;
+  int64 dropped_by_fault_injector = 6;
+  repeated int32 unreachable_peers = 7;
+  int64 order_messages_sent = 8;
+  int64 order_control_sent = 9;
+  int64 order_queue_peak = 10;
+}
+
+message ReplicaSnapshot {
+  int64 session_id = 1;
+  int32 office_id = 2;
+  string office_name = 3;
+  bool completed = 4;
+  string digest = 5;
+  repeated SeatOwner owners = 6;
+  repeated AppliedCommand applied = 7;
+  TransportStats stats = 8;
+  string ordering = 9;
+  double latency_mean_ms = 10;
+  double latency_p95_ms = 11;
+  string sequencer = 12;
+}
+
+service Auditor {
+  rpc SubmitSnapshot(ReplicaSnapshot) returns (Empty);
+}
